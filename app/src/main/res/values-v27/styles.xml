@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 27+: açık renkli panellerin (#fafafa) üstünde gezinme çubuğu simgeleri koyu olsun. -->
+    <style name="AppTheme" parent="Base.AppTheme">
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>
