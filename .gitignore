@@ -1,0 +1,14 @@
+*.jks
+*.keystore
+keystore.properties
+local.properties
+.gradle/
+build/
+google-services.json
+
+# AI assistant files
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+GOREVLER.md
