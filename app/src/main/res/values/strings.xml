@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="load_error">Navortal\'a bağlanılamadı. İnternet bağlantını kontrol et; bağlantı geri geldiğinde sayfa kendiliğinden yenilenir.</string>
+    <string name="retry">Yeniden dene</string>
+    <string name="load_timeout">Navortal yanıt vermedi. İnternet bağlantını kontrol edip tekrar dene.</string>
+    <string name="error_back_to_welcome">Karşılamaya dön</string>
+
+    <!-- Karşılama ekranı -->
+    <string name="brand_name">Navortal</string>
+    <string name="hero_label">Bugünden geriye</string>
+    <string name="hero_caption">kaldı · şimdi %1$s</string>
+    <string name="ring_description">Bugünden geriye %1$s kaldı, şimdi %2$s</string>
+    <string name="plan_caption">Bugün şunları yapacak olsan:</string>
+    <string name="plan_sum_left">Plan %1$s</string>
+    <string name="plan_sum_left_over">Plan bugüne sığmıyor</string>
+    <string name="plan_sum_right">Boşta %1$s</string>
+    <string name="plan_sum_right_over">%1$s taşıyor</string>
+    <string name="brand_line">Zihnin dağınık olabilir, planın olmasın.</string>
+    <string name="cta_primary">Bugünü ücretsiz planla</string>
+    <string name="cta_google">Google ile devam et</string>
+    <string name="login_prompt">Zaten hesabın var mı?</string>
+    <string name="login_action">Giriş yap</string>
+    <string name="legal_terms">Kullanım Koşulları</string>
+    <string name="legal_privacy">Gizlilik</string>
+    <string name="legal_kvkk">KVKK</string>
+    <string name="legal_separator">·</string>
+    <string-array name="task_titles_a">
+        <item>Sunumun girişini yaz</item>
+        <item>Kaynak notlarını düzenle</item>
+        <item>Dişçiyi ara</item>
+    </string-array>
+    <string-array name="task_titles_b">
+        <item>Tabloları hazırla</item>
+        <item>Mutfağı topla</item>
+        <item>Faturayı öde</item>
+    </string-array>
+
+    <!-- Push bildirimleri -->
+    <string name="push_channel_name">Hatırlatmalar</string>
+    <string name="push_channel_description">Görev ve plan hatırlatmaları</string>
+    <string name="push_channel_silent_name">Hatırlatmalar (sessiz)</string>
+    <string name="push_channel_silent_description">Ses ve titreşim olmadan gösterilen hatırlatmalar</string>
+
+    <!-- Çevrimdışı paneli -->
+    <string name="offline_title">İnternet bağlantısı yok</string>
+    <string name="offline_body">Hesap açmak ya da giriş yapmak için Navortal\'a bağlanman gerekiyor. Bağlantın geri geldiğinde buradan devam edersin.</string>
+    <string name="offline_retry">Tekrar dene</string>
+    <string name="offline_close">Kapat</string>
+
+    <!-- Google girişi henüz hazır değil paneli -->
+    <string name="google_soon_title">Google ile giriş yakında</string>
+    <string name="google_soon_body">Google hesabıyla giriş bu sürümde henüz hazır değil. Şimdilik e-posta ve parolanla giriş yapabilirsin.</string>
+    <string name="google_soon_primary">E-posta ile devam et</string>
+    <string name="google_error_title">Google ile giriş yapılamadı</string>
+    <string name="google_error_generic">Bir sorun oluştu. Tekrar deneyebilir ya da e-posta ve parolanla giriş yapabilirsin.</string>
+    <string name="google_error_no_account">Bu cihazda kullanılabilir bir Google hesabı bulunamadı. Hesap ekleyip tekrar deneyebilir ya da e-posta ile giriş yapabilirsin.</string>
+    <string name="google_error_network">Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.</string>
+    <string name="google_error_retry">Giriş doğrulanamadı. Lütfen tekrar dene.</string>
+    <string name="google_error_link_required">Bu e-postayla kayıtlı bir Navortal hesabın zaten var. E-posta ve parolanla giriş yap; Google hesabını sonra hesabına bağlayabilirsin.</string>
+    <string name="google_error_already_linked">Bu Google hesabı başka bir Navortal hesabına bağlı. Doğru hesapla ya da e-posta ile giriş yapabilirsin.</string>
+    <string name="google_error_disabled">Google ile giriş şu an kullanılamıyor. E-posta ve parolanla devam edebilirsin.</string>
+    <string name="google_error_rate_limited">Çok fazla deneme yapıldı. Biraz bekleyip tekrar dene.</string>
+    <string name="google_error_retry_action">Tekrar dene</string>
+
+    <!-- Yükleme geçişi -->
+    <string name="loading_status">Navortal açılıyor…</string>
+    <string name="loading_progress">Navortal yükleniyor</string>
+    <string name="loading_cancel">Vazgeç</string>
+</resources>

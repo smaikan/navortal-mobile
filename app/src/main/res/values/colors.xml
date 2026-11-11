@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#546F64</color>
+
+    <color name="brand_blue">#0070F3</color>
+    <color name="welcome_bg">#E8F4F1</color>
+    <color name="ink">#171717</color>
+    <color name="muted">#4A5A56</color>
+    <color name="muted_panel">#5F5F5F</color>
+    <color name="panel">#FAFAFA</color>
+    <color name="link">#0062D1</color>
+    <color name="ring_elapsed">#C6DAD4</color>
+    <color name="card_border">#D5E3DF</color>
+    <color name="bar_track">#E3ECEA</color>
+    <color name="task_blue">#0070F3</color>
+    <color name="task_green">#0A7A68</color>
+    <color name="task_purple">#7A3FD1</color>
+    <color name="free_green">#0A6E5E</color>
+    <color name="overflow">#8F4A00</color>
+    <color name="outline_gray">#D4D4D4</color>
+    <color name="scrim">#66171717</color>
+    <color name="grabber">#D6D6D6</color>
+    <color name="icon_box">#F2F2F2</color>
+    <color name="loading_track">#E3E3E3</color>
+    <color name="white">#FFFFFF</color>
+    <color name="ripple_light">#33FFFFFF</color>
+    <color name="ripple_dark">#14000000</color>
+</resources>
