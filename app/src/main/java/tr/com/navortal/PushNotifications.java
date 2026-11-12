@@ -1,0 +1,102 @@
+package tr.com.navortal;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+
+/** Push (FCM) bildirimleri için kanal, gösterim ve cihaz tokenının yerel saklanması (token tek yerde burada). Token loglanmaz. */
+final class PushNotifications {
+    static final String CHANNEL = "reminders-v1";
+    /** Sunucu "silent" derse sessiz gösterim için düşük önemli kardeş kanal (çerçevede bildirim başına setSilent yok). */
+    static final String SILENT_CHANNEL = "reminders-silent-v1";
+    static final String EXTRA_DELIVERY = "push.deliveryId", EXTRA_RECIPIENT = "push.recipient", EXTRA_BINDING = "push.binding",
+            EXTRA_SNOOZE = "push.snooze", EXTRA_PATH = "push.path";
+    private static final String PREFS = "navortal-push", TOKEN = "fcm-token", TAG_PREFIX = "push-";
+    private static final int NOTIFICATION_ID = 9201;
+
+    private PushNotifications() { }
+
+    static void ensureChannel(Context context) {
+        var manager = context.getSystemService(NotificationManager.class);
+        if (manager == null) return;
+        if (manager.getNotificationChannel(CHANNEL) == null) {
+            var channel = new NotificationChannel(CHANNEL, context.getString(R.string.push_channel_name), NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription(context.getString(R.string.push_channel_description));
+            manager.createNotificationChannel(channel);
+        }
+        if (manager.getNotificationChannel(SILENT_CHANNEL) == null) {
+            var quiet = new NotificationChannel(SILENT_CHANNEL, context.getString(R.string.push_channel_silent_name), NotificationManager.IMPORTANCE_LOW);
+            quiet.setDescription(context.getString(R.string.push_channel_silent_description));
+            manager.createNotificationChannel(quiet);
+        }
+    }
+
+    /** Yeni/yenilenen token yerel olarak saklanır; sunucuya kaydı {@link PushRegistrar} yapar. */
+    static void saveToken(Context context, String token) {
+        if (token == null || token.isEmpty()) return;
+        prefs(context).edit().putString(TOKEN, token).apply();
+    }
+
+    static String token(Context context) { return prefs(context).getString(TOKEN, null); }
+
+    /** Sunucunun doğruladığı hatırlatmayı gösterir (kararı ve doğrulamayı çağıran verir). Aynı dedupeKey aynı bildirimi değiştirir. */
+    static void showReminder(Context context, PushPayload p, boolean silent) {
+        var manager = context.getSystemService(NotificationManager.class);
+        if (manager == null || !manager.areNotificationsEnabled()) return;
+        ensureChannel(context);
+        var intent = new Intent(context, MainActivity.class)
+                .setData(Uri.parse("navortal://push/" + p.deliveryId)) // her teslim için ayrı PendingIntent
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra(EXTRA_DELIVERY, p.deliveryId)
+                .putExtra(EXTRA_RECIPIENT, p.recipientUserId)
+                .putExtra(EXTRA_BINDING, p.bindingVersion)
+                .putExtra(EXTRA_SNOOZE, p.snoozeCount);
+        if (p.path != null) intent.putExtra(EXTRA_PATH, p.path);
+        var open = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        var title = p.title.isEmpty() ? context.getString(R.string.brand_name) : p.title;
+        var builder = new Notification.Builder(context, silent ? SILENT_CHANNEL : CHANNEL)
+                .setSmallIcon(R.drawable.ic_timer)
+                .setContentTitle(title)
+                .setContentText(p.body)
+                .setStyle(new Notification.BigTextStyle().bigText(p.body))
+                .setGroup(p.groupKey)
+                .setAutoCancel(true)
+                .setContentIntent(open);
+        try { manager.notify(TAG_PREFIX + PushRules.tokenHash(p.dedupeKey), NOTIFICATION_ID, builder.build()); }
+        catch (SecurityException ignored) { /* İzin eşzamanlı geri alınmış olabilir. */ }
+    }
+
+    /** Hesap değişiminde/çıkışta eski kullanıcıya ait hâlâ görünen hatırlatmaları kaldırır. */
+    static void cancelReminders(Context context) {
+        var manager = context.getSystemService(NotificationManager.class);
+        if (manager == null) return;
+        try {
+            for (var active : manager.getActiveNotifications())
+                if (active.getTag() != null && active.getTag().startsWith(TAG_PREFIX)) manager.cancel(active.getTag(), active.getId());
+        } catch (RuntimeException ignored) { }
+    }
+
+    /** Eski biçim: gelen bildirim (notification) mesajını basitçe gösterir; veri mesajı akışı {@link PushDelivery}'dedir. */
+    static void show(Context context, String title, String body) {
+        var manager = context.getSystemService(NotificationManager.class);
+        if (manager == null || !manager.areNotificationsEnabled()) return;
+        ensureChannel(context);
+        var intent = new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        var open = PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        var builder = new Notification.Builder(context, CHANNEL)
+                .setSmallIcon(R.drawable.ic_timer)
+                .setContentTitle(title == null || title.isEmpty() ? context.getString(R.string.brand_name) : title)
+                .setContentText(body == null ? "" : body)
+                .setAutoCancel(true)
+                .setContentIntent(open);
+        try { manager.notify(NOTIFICATION_ID, builder.build()); }
+        catch (SecurityException ignored) { /* İzin eşzamanlı geri alınmış olabilir. */ }
+    }
+
+    private static SharedPreferences prefs(Context context) { return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
+}
