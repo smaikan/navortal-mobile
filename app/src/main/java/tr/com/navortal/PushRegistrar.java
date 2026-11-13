@@ -57,9 +57,10 @@ final class PushRegistrar {
     }
 
     private static void run(Context ctx, boolean force) {
-        if (!PlayServices.available(ctx) || halted) return;
+        if (!PlayServices.available(ctx)) { Log.i(TAG, "durdu: Google Play hizmeti yok"); return; }
+        if (halted) { Log.i(TAG, "durdu: önceki 403 nedeniyle bu süreçte kapalı"); return; }
         long now = System.currentTimeMillis();
-        if (now < PushStore.blockedUntil(ctx)) return;
+        if (now < PushStore.blockedUntil(ctx)) { Log.i(TAG, "durdu: hız sınırı bekleniyor"); return; }
 
         var asked = ctx.getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE).getBoolean(PushPermission.ASKED_KEY, false);
         var permission = PushPermission.state(ctx, asked);
@@ -69,20 +70,20 @@ final class PushRegistrar {
             token = fetchToken();
             if (token != null) PushNotifications.saveToken(ctx, token);
         }
-        if (!PushApi.validToken(token)) return;
+        if (!PushApi.validToken(token)) { Log.i(TAG, "durdu: FCM token alınamadı"); return; }
         var tokenHash = PushRules.tokenHash(token);
-        if (tokenHash.equals(PushStore.ownedTokenHash(ctx))) return; // fcm_token_owned: token değişene dek denenmez
+        if (tokenHash.equals(PushStore.ownedTokenHash(ctx))) { Log.i(TAG, "durdu: token başka kuruluma ait"); return; } // fcm_token_owned: token değişene dek denenmez
 
         var appVersion = PushApi.clip(versionName(ctx), 32);
-        if (appVersion.isEmpty()) return;
+        if (appVersion.isEmpty()) { Log.i(TAG, "durdu: uygulama sürümü okunamadı"); return; }
         // Ucuz yerel ön kontrol: durum değişmediyse ve zorlanmadıysa ağa hiç çıkma.
         var bound = PushStore.boundUserId(ctx);
-        if (!force && !PushRules.due(PushStore.snapshot(ctx), new PushRules.Snapshot(tokenHash, permission, channel, appVersion, null, now), now)) return;
+        if (!force && !PushRules.due(PushStore.snapshot(ctx), new PushRules.Snapshot(tokenHash, permission, channel, appVersion, null, now), now)) { Log.i(TAG, "atlandı: durum değişmedi (izin=" + permission + ", kanal=" + channel + ")"); return; }
 
         var cookie = sessionCookie();
-        if (cookie == null) return; // oturum yok: sessizce dur, bir sonraki girişte tekrar denenir
+        if (cookie == null) { Log.i(TAG, "durdu: oturum çerezi yok"); return; } // oturum yok: bir sonraki girişte tekrar denenir
         String userId = currentUserId(cookie);
-        if (userId == null) return;
+        if (userId == null) { Log.i(TAG, "durdu: kullanıcı kimliği alınamadı"); return; }
 
         if (bound != null && !bound.equalsIgnoreCase(userId)) { // hesap değişti: eski kullanıcının izleri silinir
             PushStore.clearBinding(ctx);
@@ -90,7 +91,8 @@ final class PushRegistrar {
         }
         int epoch = PushStore.epoch(ctx);
         var current = new PushRules.Snapshot(tokenHash, permission, channel, appVersion, userId, now);
-        if (!PushRules.due(PushStore.snapshot(ctx), current, now)) return;
+        if (!PushRules.due(PushStore.snapshot(ctx), current, now)) { Log.i(TAG, "atlandı: bu durum zaten kayıtlı"); return; }
+        Log.i(TAG, "kayıt isteği gönderiliyor (izin=" + permission + ", kanal=" + channel + ")");
         register(ctx, cookie, userId, token, current, epoch);
     }
 
@@ -123,6 +125,7 @@ final class PushRegistrar {
         if (response == null) return;
         switch (response.outcome()) {
             case OK: {
+                Log.i(TAG, "kayıt başarılı");
                 var device = PushApi.parseDevice(response.body);
                 if (device != null && PushRules.canStore(epoch, PushStore.epoch(ctx), userId, device.userId))
                     PushStore.bind(ctx, device.userId, device.bindingVersion, snapshot);
