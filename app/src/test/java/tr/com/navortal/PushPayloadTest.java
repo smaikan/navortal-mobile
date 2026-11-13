@@ -166,4 +166,29 @@ public class PushPayloadTest {
         assertFalse(PushPayload.tapValid(USER, 4, null, 4, true));
         assertFalse(PushPayload.tapValid(null, 4, USER, 4, true));
     }
+
+    @Test public void optionalParentTaskAndStepsAreParsed() throws Exception {
+        var m = valid();
+        m.put("parentTitle", "Tez bölüm 4");
+        m.put("stepIndex", "2");
+        m.put("stepCount", "5");
+        var p = parse(m);
+        assertEquals("Tez bölüm 4", p.parentTitle);
+        assertEquals(2, p.stepIndex);
+        assertEquals(5, p.stepCount);
+    }
+
+    @Test public void missingOrInvalidOptionalFieldsAreIgnoredNotRejected() throws Exception {
+        var none = parse(valid());
+        assertEquals("", none.parentTitle);
+        assertEquals(0, none.stepCount);
+        var bad = valid();
+        bad.put("stepIndex", "9");
+        bad.put("stepCount", "5"); // sıra sayıdan büyük
+        assertEquals(0, parse(bad).stepCount);
+        bad.put("stepIndex", "x");
+        assertEquals(0, parse(bad).stepIndex);
+        bad.put("parentTitle", "a\u0000b\n" + "x".repeat(200));
+        assertTrue(parse(bad).parentTitle.codePointCount(0, parse(bad).parentTitle.length()) <= PushPayload.MAX_PARENT);
+    }
 }

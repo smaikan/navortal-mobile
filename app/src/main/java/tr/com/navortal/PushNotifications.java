@@ -58,15 +58,21 @@ final class PushNotifications {
                 .putExtra(EXTRA_SNOOZE, p.snoozeCount);
         if (p.path != null) intent.putExtra(EXTRA_PATH, p.path);
         var open = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        var title = p.title.isEmpty() ? context.getString(R.string.brand_name) : p.title;
+        var label = PushEventLabel.of(p.eventType);
+        var title = p.title.isEmpty() ? label : p.title; // başlık yoksa türün adı
+        var step = PushEventLabel.stepSummary(p.stepIndex, p.stepCount);
         var builder = new Notification.Builder(context, silent ? SILENT_CHANNEL : CHANNEL)
                 .setSmallIcon(R.drawable.ic_timer)
                 .setContentTitle(title)
+                .setSubText(PushEventLabel.subText(p.eventType, p.parentTitle)) // tür · üst görev
+                .setColor(0xFF0070F3) // marka mavisi
+                .setCategory(Notification.CATEGORY_REMINDER)
                 .setContentText(p.body)
-                .setStyle(new Notification.BigTextStyle().bigText(p.body))
+                .setStyle(new Notification.BigTextStyle().bigText(p.body).setSummaryText(step.isEmpty() ? null : step))
                 .setGroup(p.groupKey)
                 .setAutoCancel(true)
                 .setContentIntent(open);
+        if (!step.isEmpty()) builder.setProgress(p.stepCount, p.stepIndex, false); // alt görev ilerleme çubuğu
         try { manager.notify(TAG_PREFIX + PushRules.tokenHash(p.dedupeKey), NOTIFICATION_ID, builder.build()); }
         catch (SecurityException ignored) { /* İzin eşzamanlı geri alınmış olabilir. */ }
     }

@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 final class PushPayload {
     static final String SCHEMA = "1", TYPE = "notification.ready", CHANNEL = "reminders-v1";
     static final long SKEW_MS = 30_000;
-    static final int MAX_TITLE = 80, MAX_BODY = 200, MAX_KEY = 200;
+    static final int MAX_TITLE = 120, MAX_BODY = 300, MAX_KEY = 200, MAX_PARENT = 80, MAX_STEPS = 999;
 
     private static final String UUID = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
     private static final Pattern UUID_RE = Pattern.compile("^" + UUID + "$");
@@ -22,13 +22,18 @@ final class PushPayload {
     }
 
     final String deliveryId, notificationId, recipientUserId, eventType, title, body, dedupeKey, groupKey;
+    /** İsteğe bağlı: alt görevin bağlı olduğu üst görev adı (boş olabilir) ve alt görev sırası/sayısı (0 = yok). */
+    final String parentTitle;
+    final int stepIndex, stepCount;
     /** Doğrulanmış "/notifications/&lt;uuid&gt;" yolu; geçersizse null (uygulama yalnız açılır). */
     final String path;
     final long bindingVersion, expiresAtMs;
     final int snoozeCount;
 
     private PushPayload(String deliveryId, String notificationId, String recipientUserId, String eventType, String title, String body,
-                        String path, String dedupeKey, String groupKey, long bindingVersion, int snoozeCount, long expiresAtMs) {
+                        String path, String dedupeKey, String groupKey, long bindingVersion, int snoozeCount, long expiresAtMs,
+                        String parentTitle, int stepIndex, int stepCount) {
+        this.parentTitle = parentTitle; this.stepIndex = stepIndex; this.stepCount = stepCount;
         this.deliveryId = deliveryId; this.notificationId = notificationId; this.recipientUserId = recipientUserId;
         this.eventType = eventType; this.title = title; this.body = body; this.path = path; this.dedupeKey = dedupeKey;
         this.groupKey = groupKey; this.bindingVersion = bindingVersion; this.snoozeCount = snoozeCount; this.expiresAtMs = expiresAtMs;
@@ -72,8 +77,16 @@ final class PushPayload {
         var title = clean(data.get("title"), MAX_TITLE);
         var body = clean(data.get("body"), MAX_BODY);
         if (data.get("title") == null || data.get("body") == null || (title.isEmpty() && body.isEmpty())) throw new Invalid("text");
+        // İsteğe bağlı alanlar: yoksa veya geçersizse yok sayılır, mesaj reddedilmez.
+        var parentTitle = clean(data.get("parentTitle"), MAX_PARENT);
+        int stepIndex = 0, stepCount = 0;
+        try {
+            int index = Integer.parseInt(data.getOrDefault("stepIndex", "0").trim());
+            int count = Integer.parseInt(data.getOrDefault("stepCount", "0").trim());
+            if (count >= 1 && count <= MAX_STEPS && index >= 1 && index <= count) { stepIndex = index; stepCount = count; }
+        } catch (NumberFormatException ignored) { /* alt görev ilerlemesi gösterilmez */ }
         return new PushPayload(deliveryId, notificationId, recipient, eventType, title, body, validPath(data.get("path")), dedupeKey,
-                groupKey.isEmpty() ? "reminders" : groupKey, binding, snooze, expires);
+                groupKey.isEmpty() ? "reminders" : groupKey, binding, snooze, expires, parentTitle, stepIndex, stepCount);
     }
 
     /** Bildirime dokunuş hâlâ geçerli mi: oturum açık ve alıcı/bağlama kayıtlı olanla aynı mı. */
