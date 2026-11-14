@@ -161,6 +161,10 @@ public final class MainActivity extends ComponentActivity {
             }
 
             @Override public void onPageFinished(WebView view, String url) {
+                if (loginMarkerScript != null && url != null && trusted(Uri.parse(url))) {
+                    loginMarkerScript.remove(); // işaret ilk yüklemede yazıldı; sonraki sayfalara karışma
+                    loginMarkerScript = null;
+                }
                 trackSignIn(url);
                 if (loadFailed) return;
                 if (clearHistoryOnFinish) { clearHistoryOnFinish = false; view.clearHistory(); }
@@ -288,6 +292,18 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private GoogleSignIn google;
+    private androidx.webkit.ScriptHandler loginMarkerScript;
+
+    /**
+     * Web uygulaması oturum çerezine ek olarak localStorage'daki "adhd.session.v1" işaretine bakar; işaret yoksa kullanıcıyı
+     * çıkış yapmış sayıp /login'e atar. Native girişte işareti, sayfa betikleri çalışmadan önce (yalnız güvenilir origin'de) biz yazarız.
+     */
+    private void markWebSignedIn() {
+        if (loginMarkerScript != null) { loginMarkerScript.remove(); loginMarkerScript = null; }
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return;
+        var script = "try{if(!localStorage.getItem('adhd.session.v1'))localStorage.setItem('adhd.session.v1','{\"version\":1}')}catch(e){}";
+        loginMarkerScript = WebViewCompat.addDocumentStartJavaScript(web, script, Set.of(ORIGIN));
+    }
 
     /** Google Play hizmetli cihazlarda native giriş: oturum çerezi WebView'e yazılır, sonra planlama açılır. */
     private void startGoogleSignIn() {
@@ -299,7 +315,10 @@ public final class MainActivity extends ComponentActivity {
                 var cookies = CookieManager.getInstance();
                 cookies.setCookie(ORIGIN, cookie, ok -> {
                     cookies.flush();
-                    if (welcome != null) openSite("/planning");
+                    if (welcome == null) return;
+                    markWebSignedIn();
+                    PushRegistrar.request(MainActivity.this, true); // yeni oturum: "signed-in" zaten true olsa da cihaz kaydı yenilenir
+                    openSite("/planning");
                 });
             }
 
