@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#005DEB</color>
+    <color name="ic_launcher_background">#00000000</color>
 
     <color name="brand_blue">#0070F3</color>
     <color name="welcome_bg">#E8F4F1</color>
@@ -24,5 +24,5 @@
     <color name="loading_track">#E3E3E3</color>
     <color name="white">#FFFFFF</color>
     <color name="ripple_light">#33FFFFFF</color>
-    <color name="ripple_dark">#14000000</color>
+    <color name="ripple_dark">#26000000</color>
 </resources>
