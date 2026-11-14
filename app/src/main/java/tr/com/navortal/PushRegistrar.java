@@ -50,15 +50,20 @@ final class PushRegistrar {
         }, DEBOUNCE_SECONDS, TimeUnit.SECONDS);
     }
 
-    /** WebView çerez deposundan yalnız oturum çerezi çifti; yoksa veya okunamazsa null. */
-    static String sessionCookie() {
-        try { return PushApi.sessionPair(CookieManager.getInstance().getCookie(MainActivity.ORIGIN)); }
-        catch (RuntimeException e) { return null; }
+    /**
+     * Oturum çerezi çifti: önce WebView çerez deposu (güncel kopya şifreli saklanır); uygulama kapalıyken FCM servisi yeni süreçte
+     * başlarsa depo boş dönebildiği için şifreli kopyaya düşülür. İkisi de yoksa null.
+     */
+    static String sessionCookie(Context ctx) {
+        String live = null;
+        try { live = PushApi.sessionPair(CookieManager.getInstance().getCookie(MainActivity.ORIGIN)); }
+        catch (RuntimeException e) { /* depo okunamadı */ }
+        if (live != null) { SessionVault.save(ctx, live); return live; }
+        return SessionVault.load(ctx);
     }
 
     private static void run(Context ctx, boolean force) {
         if (!PlayServices.available(ctx)) { Log.i(TAG, "durdu: Google Play hizmeti yok"); return; }
-        if (halted) { Log.i(TAG, "durdu: önceki 403 nedeniyle bu süreçte kapalı"); return; }
         long now = System.currentTimeMillis();
         if (now < PushStore.blockedUntil(ctx)) { Log.i(TAG, "durdu: hız sınırı bekleniyor"); return; }
 
@@ -66,9 +71,10 @@ final class PushRegistrar {
         var permission = PushPermission.state(ctx, asked);
         boolean channel = PushPermission.channelEnabled(ctx);
         var token = PushNotifications.token(ctx);
-        if (token == null) {
-            token = fetchToken();
-            if (token != null) PushNotifications.saveToken(ctx, token);
+        var fresh = fetchToken(); // FCM kendi önbelleğinden hızlı döner; onNewToken kaçmış olsa da güncel token'ı yakalar
+        if (fresh != null) {
+            if (!fresh.equals(token)) { Log.i(TAG, "FCM token yenilenmiş, kayıt tazelenecek"); PushNotifications.saveToken(ctx, fresh); }
+            token = fresh;
         }
         if (!PushApi.validToken(token)) { Log.i(TAG, "durdu: FCM token alınamadı"); return; }
         var tokenHash = PushRules.tokenHash(token);
@@ -76,12 +82,16 @@ final class PushRegistrar {
 
         var appVersion = PushApi.clip(versionName(ctx), 32);
         if (appVersion.isEmpty()) { Log.i(TAG, "durdu: uygulama sürümü okunamadı"); return; }
-        // Ucuz yerel ön kontrol: durum değişmediyse ve zorlanmadıysa ağa hiç çıkma.
-        var bound = PushStore.boundUserId(ctx);
-        if (!force && !PushRules.due(PushStore.snapshot(ctx), new PushRules.Snapshot(tokenHash, permission, channel, appVersion, null, now), now)) { Log.i(TAG, "atlandı: durum değişmedi (izin=" + permission + ", kanal=" + channel + ")"); return; }
-
-        var cookie = sessionCookie();
+        var cookie = sessionCookie(ctx);
         if (cookie == null) { Log.i(TAG, "durdu: oturum çerezi yok"); return; } // oturum yok: bir sonraki girişte tekrar denenir
+        // Yeni oturum (çıkış-giriş): sunucu eski oturuma bağlı cihazı pasifleştirmiştir, kayıt durum aynı olsa da yenilenir.
+        var sessionHash = PushRules.tokenHash(cookie);
+        boolean sessionChanged = !sessionHash.equals(PushStore.registeredSession(ctx));
+        if (sessionChanged || force) halted = false; // önceki 403 yeni oturumla geçerliliğini yitirir
+        if (halted) { Log.i(TAG, "durdu: önceki 403 nedeniyle bu süreçte kapalı"); return; }
+        // Ucuz yerel ön kontrol: durum değişmediyse, oturum aynıysa ve zorlanmadıysa ağa hiç çıkma.
+        var bound = PushStore.boundUserId(ctx);
+        if (!force && !sessionChanged && !PushRules.due(PushStore.snapshot(ctx), new PushRules.Snapshot(tokenHash, permission, channel, appVersion, null, now), now)) { Log.i(TAG, "atlandı: durum değişmedi (izin=" + permission + ", kanal=" + channel + ")"); return; }
         String userId = currentUserId(cookie);
         if (userId == null) { Log.i(TAG, "durdu: kullanıcı kimliği alınamadı"); return; }
 
@@ -91,9 +101,9 @@ final class PushRegistrar {
         }
         int epoch = PushStore.epoch(ctx);
         var current = new PushRules.Snapshot(tokenHash, permission, channel, appVersion, userId, now);
-        if (!PushRules.due(PushStore.snapshot(ctx), current, now)) { Log.i(TAG, "atlandı: bu durum zaten kayıtlı"); return; }
-        Log.i(TAG, "kayıt isteği gönderiliyor (izin=" + permission + ", kanal=" + channel + ")");
-        register(ctx, cookie, userId, token, current, epoch);
+        if (!force && !sessionChanged && !PushRules.due(PushStore.snapshot(ctx), current, now)) { Log.i(TAG, "atlandı: bu durum zaten kayıtlı"); return; }
+        Log.i(TAG, "kayıt isteği gönderiliyor (izin=" + permission + ", kanal=" + channel + (sessionChanged ? ", yeni oturum" : "") + ")");
+        register(ctx, cookie, userId, token, current, epoch, sessionHash);
     }
 
     private static String currentUserId(String cookie) {
@@ -109,7 +119,7 @@ final class PushRegistrar {
     }
 
     /** PUT cihaz; binding çakışmasında bir kez GET + yeniden dene; ağ/500'de aynı istek (aynı anahtar) bir kez tekrarlanır. */
-    private static void register(Context ctx, String cookie, String userId, String token, PushRules.Snapshot snapshot, int epoch) {
+    private static void register(Context ctx, String cookie, String userId, String token, PushRules.Snapshot snapshot, int epoch, String sessionHash) {
         long binding = PushStore.bindingVersion(ctx);
         var response = send(ctx, cookie, userId, token, snapshot, binding);
         if (response != null && response.outcome() == PushApi.Outcome.BINDING_CONFLICT) {
@@ -119,6 +129,10 @@ final class PushRegistrar {
                 var device = get.status == 200 ? PushApi.parseDevice(get.body) : null;
                 if (get.status == 200 && device == null) return;
                 if (device != null) adopted = device.bindingVersion;
+                else if (get.status == 404) { // kayıt kapanmış eski oturuma bağlı: bu oturum onu okuyamaz, bindingVersion öğrenilemez
+                    Log.i(TAG, "cihaz kaydı başka oturuma bağlı: yeni kurulum kimliğiyle kaydolunuyor");
+                    PushStore.rotateInstallation(ctx);
+                }
             } catch (IOException e) { return; }
             response = send(ctx, cookie, userId, token, snapshot, adopted); // yalnız bir kez
         }
@@ -128,7 +142,10 @@ final class PushRegistrar {
                 Log.i(TAG, "kayıt başarılı");
                 var device = PushApi.parseDevice(response.body);
                 if (device != null && PushRules.canStore(epoch, PushStore.epoch(ctx), userId, device.userId))
+                {
                     PushStore.bind(ctx, device.userId, device.bindingVersion, snapshot);
+                    PushStore.setRegisteredSession(ctx, sessionHash);
+                }
                 break;
             }
             case RATE_LIMITED: PushStore.blockUntil(ctx, System.currentTimeMillis() + PushApi.retryAfterMs(response.retryAfter)); break;

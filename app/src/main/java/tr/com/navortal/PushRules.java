@@ -6,8 +6,8 @@ import java.security.NoSuchAlgorithmException;
 
 /** Kayıt sıklığı, sıra numarası ve geç gelen sonucun saklanıp saklanmayacağı kuralları (saf mantık). */
 final class PushRules {
-    /** Aynı durum bundan sık sunucuya yeniden gönderilmez. */
-    static final long RESEND_MS = 24L * 3600 * 1000;
+    /** Aynı durum bundan sık sunucuya yeniden gönderilmez (sunucu cihazı pasifleştirmiş olabilir; saatlik yenileme kaydı geri getirir ve LastSeenAt tazeler). */
+    static final long RESEND_MS = 3600L * 1000;
 
     private PushRules() { }
 
@@ -22,7 +22,7 @@ final class PushRules {
         }
     }
 
-    /** Kayıt gerekli mi: hiç yok, durum değişti ya da 24 saati aştı. */
+    /** Kayıt gerekli mi: hiç yok, durum değişti ya da 1 saati aştı. */
     static boolean due(Snapshot last, Snapshot current, long nowMs) {
         if (last == null) return true;
         if (nowMs - last.time >= RESEND_MS || nowMs < last.time) return true;

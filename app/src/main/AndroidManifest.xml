@@ -3,6 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- API 30+ paket görünürlüğü: Google Play hizmetlerinin varlığını sorgulamak için. -->
     <queries>
         <package android:name="com.google.android.gms" />
@@ -23,6 +24,7 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <service android:name=".PushRefreshJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
         <!-- Arka planda sistemin gösterdiği bildirimler bu kanalı ve simgeyi kullanır. -->
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="reminders-v1" />
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_timer" />

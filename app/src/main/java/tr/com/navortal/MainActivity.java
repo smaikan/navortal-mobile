@@ -258,6 +258,7 @@ public final class MainActivity extends ComponentActivity {
             else { // çıkış: çerez gittiği için DELETE denenmez; yalnız yerel bağlama ve görünen hatırlatmalar silinir
                 PushStore.clearBinding(this);
                 PushNotifications.cancelReminders(this);
+                SessionVault.clear(this);
             }
         }
         if (Boolean.TRUE.equals(state)) askNotificationPermission();
@@ -501,8 +502,11 @@ public final class MainActivity extends ComponentActivity {
     @Override protected void onStart() {
         super.onStart();
         if (welcome != null && loading == null) welcome.start();
-        // Giriş açıkken: izin/kanal durumu son kayıttan farklıysa (veya 24 saat geçtiyse) kayıt yenilenir; aksi halde ağa çıkılmaz.
-        if (getPreferences(MODE_PRIVATE).getBoolean(SIGNED_IN, false)) PushRegistrar.request(this, false);
+        // Giriş açıkken: izin/kanal durumu son kayıttan farklıysa (veya 1 saat geçtiyse) kayıt yenilenir; aksi halde ağa çıkılmaz.
+        if (getPreferences(MODE_PRIVATE).getBoolean(SIGNED_IN, false)) {
+            PushRegistrar.request(this, false);
+            PushRefreshJob.schedule(this); // uygulama açılmasa da günde iki kez token/kayıt yoklaması
+        }
         var cm = getSystemService(ConnectivityManager.class);
         if (cm == null) return;
         networkCallback = new ConnectivityManager.NetworkCallback() {
@@ -537,6 +541,7 @@ public final class MainActivity extends ComponentActivity {
     @Override protected void onPause() {
         if (web != null) web.onPause();
         CookieManager.getInstance().flush();
+        if (getPreferences(MODE_PRIVATE).getBoolean(SIGNED_IN, false)) PushRegistrar.sessionCookie(this); // şifreli kopyayı güncel tut
         super.onPause();
     }
 

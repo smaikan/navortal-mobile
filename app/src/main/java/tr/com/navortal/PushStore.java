@@ -17,7 +17,7 @@ final class PushStore {
     private static final String PREFS = "navortal-push";
     private static final String INSTALLATION = "installation-id", SEQUENCE = "client-sequence", BINDING = "binding-version",
             USER = "bound-user-id", EPOCH = "epoch", SHOWN = "shown-keys", OWNED = "owned-token-hash", BLOCKED = "blocked-until",
-            S_TOKEN = "snap-token", S_PERM = "snap-permission", S_CHANNEL = "snap-channel", S_APP = "snap-app", S_USER = "snap-user", S_TIME = "snap-time";
+            SESSION = "registered-session", S_TOKEN = "snap-token", S_PERM = "snap-permission", S_CHANNEL = "snap-channel", S_APP = "snap-app", S_USER = "snap-user", S_TIME = "snap-time";
     private static final Object LOCK = new Object();
 
     private PushStore() { }
@@ -34,6 +34,18 @@ final class PushStore {
                 p.edit().putString(INSTALLATION, id).commit();
             }
             return id;
+        }
+    }
+
+    /**
+     * Sunucudaki kayıt başka (kapanmış) bir oturuma bağlı olduğu için okunamıyor ve bindingVersion öğrenilemiyorsa yeni bir kurulum
+     * kimliği üretilir; yeni kimlik sunucuda yoktur, bindingVersion 0 ve sıra numarası 1 ile doğrudan kaydolur. Eski kayıt pasif kalır.
+     */
+    static void rotateInstallation(Context c) {
+        synchronized (LOCK) {
+            prefs(c).edit().putString(INSTALLATION, UUID.randomUUID().toString()).putLong(SEQUENCE, 0)
+                    .remove(USER).remove(BINDING).remove(S_TOKEN).remove(S_PERM).remove(S_CHANNEL).remove(S_APP).remove(S_USER).remove(S_TIME)
+                    .remove(SESSION).commit();
         }
     }
 
@@ -66,7 +78,7 @@ final class PushStore {
         synchronized (LOCK) {
             var p = prefs(c);
             int epoch = p.getInt(EPOCH, 0) + 1;
-            p.edit().remove(USER).remove(BINDING).remove(S_TOKEN).remove(S_PERM).remove(S_CHANNEL).remove(S_APP).remove(S_USER).remove(S_TIME)
+            p.edit().remove(USER).remove(BINDING).remove(S_TOKEN).remove(S_PERM).remove(S_CHANNEL).remove(S_APP).remove(S_USER).remove(S_TIME).remove(SESSION)
                     .putInt(EPOCH, epoch).commit();
             return epoch;
         }
@@ -80,6 +92,11 @@ final class PushStore {
                     p.getString(S_APP, null), p.getString(S_USER, null), p.getLong(S_TIME, 0));
         }
     }
+
+    /** Son başarılı kaydın yapıldığı oturum çerezinin özeti (çerez değeri değil). Oturum değişince kayıt yenilenir. */
+    static String registeredSession(Context c) { synchronized (LOCK) { return prefs(c).getString(SESSION, null); } }
+
+    static void setRegisteredSession(Context c, String hash) { synchronized (LOCK) { prefs(c).edit().putString(SESSION, hash).commit(); } }
 
     /** fcm_token_owned: token değişene dek denenmez. */
     static String ownedTokenHash(Context c) { synchronized (LOCK) { return prefs(c).getString(OWNED, null); } }
