@@ -130,6 +130,7 @@ final class WelcomeScreen {
         var register = (Button) root.findViewById(R.id.welcome_register);
         withIcon(register, R.string.cta_primary, R.drawable.ic_arrow_forward, true, 18, 8);
         register.setOnClickListener(v -> listener.onRegister());
+        pressFeel(register);
         root.findViewById(R.id.welcome_login).setOnClickListener(v -> listener.onLogin());
         legal(R.id.welcome_terms, "/terms", listener);
         legal(R.id.welcome_privacy, "/privacy", listener);
@@ -139,6 +140,7 @@ final class WelcomeScreen {
         // Credential Manager Google Play hizmetleri ister; hizmetsiz cihazlarda (örn. Huawei) düğme hiç görünmez.
         // İleride tarayıcı tabanlı bir akış eklenirse bu koşul gözden geçirilir.
         google.setVisibility(PlayServices.available(context) ? View.VISIBLE : View.GONE);
+        pressFeel(google);
         google.setOnClickListener(v -> {
             if (GOOGLE_SIGN_IN_NATIVE_READY) listener.onGoogleSignIn();
             else showSheet(R.drawable.ic_google_g, R.string.google_soon_title, R.string.google_soon_body, R.string.google_soon_primary, listener::onLogin);
@@ -160,6 +162,24 @@ final class WelcomeScreen {
     }
 
     private static int[] paddings(View v) { return new int[] {v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), v.getPaddingBottom()}; }
+
+    /** Basınca düğme hafifçe küçülür, bırakınca yaylanarak döner (tıklamayı engellemez). */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private static void pressFeel(View v) {
+        v.setOnTouchListener((view, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    view.animate().scaleX(0.97f).scaleY(0.97f).setDuration(80).start();
+                    break;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    view.animate().scaleX(1f).scaleY(1f).setDuration(140).start();
+                    break;
+                default: break;
+            }
+            return false;
+        });
+    }
 
     private void legal(int id, String path, Listener listener) {
         var link = (Button) root.findViewById(id);
