@@ -123,7 +123,12 @@ public final class MainActivity extends ComponentActivity {
             WebViewCompat.addWebMessageListener(web, "navortalTimer", Set.of(ORIGIN),
                     (view, message, sourceOrigin, mainFrame, reply) -> {
                         if (!mainFrame || !trusted(sourceOrigin) || message.getType() != WebMessageCompat.TYPE_STRING || message.getData() == null || message.getData().length() > 4096) return;
-                        try { timer.accept(TimerSnapshot.parse(new JSONObject(message.getData()), System.currentTimeMillis())); }
+                        try {
+                            var json = new JSONObject(message.getData());
+                            var type = json.optString("type", "");
+                            if (type.equals("sound.get") || type.equals("sound.set")) { handleSoundMessage(json, type, reply); return; }
+                            timer.accept(TimerSnapshot.parse(json, System.currentTimeMillis()));
+                        }
                         catch (Exception ignored) { /* Geçersiz köprü mesajı çalışmaya veya oturuma dokunmaz. */ }
                     });
         }
@@ -290,6 +295,16 @@ public final class MainActivity extends ComponentActivity {
         });
         welcome.applyInsets(barLeft, barTop, barRight, barBottom);
         webHolder.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+    }
+
+    /**
+     * Web'in ayar ekranı hatırlatma seslerini uygulamaya bu köprüden bildirir/sorar. "sound.set": {"type","enabled":bool,
+     * "sounds":{"pomodoro","reminder","taskEnd"}} (kapatırken sounds yok); "sound.get": yalnız durumu ister.
+     * Yanıt her zaman {"type":"sound.state","enabled","sounds":{...},"available":[...]}.
+     */
+    private void handleSoundMessage(JSONObject json, String type, androidx.webkit.JavaScriptReplyProxy reply) throws org.json.JSONException {
+        if (type.equals("sound.set")) AlertPrefs.apply(this, json); // geçersizse kaydedilmez; yanıt mevcut durumu bildirir
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) reply.postMessage(AlertPrefs.stateJson(this));
     }
 
     private GoogleSignIn google;

@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.AudioAttributes;
 import android.net.Uri;
 
 /** Push (FCM) bildirimleri için kanal, gösterim ve cihaz tokenının yerel saklanması (token tek yerde burada). Token loglanmaz. */
@@ -28,6 +29,16 @@ final class PushNotifications {
             var channel = new NotificationChannel(CHANNEL, context.getString(R.string.push_channel_name), NotificationManager.IMPORTANCE_DEFAULT);
             channel.setDescription(context.getString(R.string.push_channel_description));
             manager.createNotificationChannel(channel);
+        }
+        for (var id : AlertSound.IDS) { // Android sesi kanalda tutar: her hatırlatma sesi için bir kanal
+            if (manager.getNotificationChannel(AlertSound.channelId(id)) != null) continue;
+            var sound = new NotificationChannel(AlertSound.channelId(id),
+                    context.getString(R.string.push_channel_sound_name, AlertSound.label(id)), NotificationManager.IMPORTANCE_DEFAULT);
+            sound.setDescription(context.getString(R.string.push_channel_description));
+            sound.setSound(Uri.parse("android.resource://" + context.getPackageName() + "/raw/" + AlertSound.rawName(id)),
+                    new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
+            manager.createNotificationChannel(sound);
         }
         if (manager.getNotificationChannel(SILENT_CHANNEL) == null) {
             var quiet = new NotificationChannel(SILENT_CHANNEL, context.getString(R.string.push_channel_silent_name), NotificationManager.IMPORTANCE_LOW);
@@ -61,7 +72,8 @@ final class PushNotifications {
         var label = PushEventLabel.of(p.eventType);
         var title = p.title.isEmpty() ? label : p.title; // başlık yoksa türün adı
         var step = PushEventLabel.stepSummary(p.stepIndex, p.stepCount);
-        var builder = new Notification.Builder(context, silent ? SILENT_CHANNEL : CHANNEL)
+        var channelId = silent ? SILENT_CHANNEL : AlertSound.channelFor(!AlertPrefs.soundForEvent(context, p.eventType).isEmpty(), AlertPrefs.soundForEvent(context, p.eventType)); // kapalıysa telefonun sesi
+        var builder = new Notification.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_timer)
                 .setContentTitle(title)
                 .setSubText(PushEventLabel.subText(p.eventType, p.parentTitle)) // tür · üst görev

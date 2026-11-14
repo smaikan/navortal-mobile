@@ -38,6 +38,7 @@
     <!-- Push bildirimleri -->
     <string name="push_channel_name">Hatırlatmalar</string>
     <string name="push_channel_description">Görev ve plan hatırlatmaları</string>
+    <string name="push_channel_sound_name">Hatırlatmalar (%1$s)</string>
     <string name="push_channel_silent_name">Hatırlatmalar (sessiz)</string>
     <string name="push_channel_silent_description">Ses ve titreşim olmadan gösterilen hatırlatmalar</string>
 
