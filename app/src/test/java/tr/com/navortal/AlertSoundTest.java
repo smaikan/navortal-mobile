@@ -19,7 +19,7 @@ public class AlertSoundTest {
     }
 
     @Test public void channelAndResourceNamesAreStable() {
-        assertEquals("reminders-glass-v1", AlertSound.channelId("glass"));
+        assertEquals("reminders-glass-v2", AlertSound.channelId("glass"));
         assertEquals("alert_glass", AlertSound.rawName("glass"));
         assertEquals("Çan", AlertSound.label("bell"));
     }
@@ -28,7 +28,7 @@ public class AlertSoundTest {
         assertEquals(PushNotifications.CHANNEL, AlertSound.channelFor(false, "bell"));
         assertEquals(PushNotifications.CHANNEL, AlertSound.channelFor(true, ""));
         assertEquals(PushNotifications.CHANNEL, AlertSound.channelFor(true, "custom"));
-        assertEquals("reminders-bell-v1", AlertSound.channelFor(true, "bell"));
+        assertEquals("reminders-bell-v2", AlertSound.channelFor(true, "bell"));
     }
 
     @Test public void eventTypesMapToCategories() {

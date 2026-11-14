@@ -12,13 +12,14 @@ import android.net.Uri;
 
 /** Push (FCM) bildirimleri için kanal, gösterim ve cihaz tokenının yerel saklanması (token tek yerde burada). Token loglanmaz. */
 final class PushNotifications {
-    static final String CHANNEL = "reminders-v1";
+    static final String CHANNEL = "reminders-v2";
     /** Sunucu "silent" derse sessiz gösterim için düşük önemli kardeş kanal (çerçevede bildirim başına setSilent yok). */
-    static final String SILENT_CHANNEL = "reminders-silent-v1";
+    static final String SILENT_CHANNEL = "reminders-silent-v2";
     static final String EXTRA_DELIVERY = "push.deliveryId", EXTRA_RECIPIENT = "push.recipient", EXTRA_BINDING = "push.binding",
             EXTRA_SNOOZE = "push.snooze", EXTRA_PATH = "push.path";
     private static final String PREFS = "navortal-push", TOKEN = "fcm-token", TAG_PREFIX = "push-";
     private static final int NOTIFICATION_ID = 9201;
+    private static final long[] VIBRATION = {0, 250, 150, 250};
 
     private PushNotifications() { }
 
@@ -28,6 +29,8 @@ final class PushNotifications {
         if (manager.getNotificationChannel(CHANNEL) == null) {
             var channel = new NotificationChannel(CHANNEL, context.getString(R.string.push_channel_name), NotificationManager.IMPORTANCE_DEFAULT);
             channel.setDescription(context.getString(R.string.push_channel_description));
+            channel.enableVibration(true);
+            channel.setVibrationPattern(VIBRATION);
             manager.createNotificationChannel(channel);
         }
         for (var id : AlertSound.IDS) { // Android sesi kanalda tutar: her hatırlatma sesi için bir kanal
@@ -38,6 +41,8 @@ final class PushNotifications {
             sound.setSound(Uri.parse("android.resource://" + context.getPackageName() + "/raw/" + AlertSound.rawName(id)),
                     new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION)
                             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
+            sound.enableVibration(true);
+            sound.setVibrationPattern(VIBRATION);
             manager.createNotificationChannel(sound);
         }
         if (manager.getNotificationChannel(SILENT_CHANNEL) == null) {
