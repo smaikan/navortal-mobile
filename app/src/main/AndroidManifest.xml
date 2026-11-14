@@ -26,7 +26,7 @@
         </service>
         <service android:name=".PushRefreshJob" android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
         <!-- Arka planda sistemin gösterdiği bildirimler bu kanalı ve simgeyi kullanır. -->
-        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="reminders-v2" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="reminders-v3" />
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_timer" />
     </application>
 </manifest>

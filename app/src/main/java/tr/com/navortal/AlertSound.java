@@ -21,7 +21,7 @@ final class AlertSound {
         return "";
     }
 
-    static String channelId(String id) { return "reminders-" + id + "-v2"; }
+    static String channelId(String id) { return "reminders-" + id + "-v3"; }
 
     /** Hatırlatma kanalı: özel ses açık ve geçerliyse onun kanalı, aksi halde telefonun varsayılan bildirim sesli ana kanal. */
     static String channelFor(boolean customEnabled, String id) {
